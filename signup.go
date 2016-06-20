@@ -6,7 +6,6 @@ import _ "github.com/go-sql-driver/mysql"
 import "golang.org/x/crypto/bcrypt"
 
 import "net/http"
-import "fmt"
 
 var db *sql.DB
 var err error
@@ -23,14 +22,19 @@ func signupPage(res http.ResponseWriter, req *http.Request) {
 	var user string
 
 	err := db.QueryRow("SELECT username FROM users WHERE username=?", username).Scan(&user)
+
 	switch {
 	case err == sql.ErrNoRows:
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(res, "Server error, unable to create your account.", 500)
+		}
 
 		_, err = db.Exec("INSERT INTO users(username, password) VALUES(?, ?)", username, hashedPassword)
 		if err != nil {
-			panic(err.Error())
+			panic(err.Error)
 		}
+
 		res.Write([]byte("User created!"))
 		return
 	case err != nil:
@@ -49,23 +53,23 @@ func loginPage(res http.ResponseWriter, req *http.Request) {
 	username := req.FormValue("username")
 	password := req.FormValue("password")
 
-	var user string
-	var pass string
+	var databaseUsername string
+	var databasePassword string
 
-	err := db.QueryRow("SELECT username, password FROM users WHERE username=?", username).Scan(&user, &pass)
+	err := db.QueryRow("SELECT username, password FROM users WHERE username=?", username).Scan(&databaseUsername, &databasePassword)
 
 	if err != nil {
 		http.Redirect(res, req, "/login", 301)
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(pass), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(databasePassword), []byte(password))
 	if err != nil {
 		http.Redirect(res, req, "/login", 301)
 		return
 	}
 
-	res.Write([]byte("Hello" + username))
+	res.Write([]byte("Hello" + databaseUsername))
 
 }
 
