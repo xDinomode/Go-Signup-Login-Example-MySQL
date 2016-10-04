@@ -18,7 +18,7 @@ CREATE TABLE users(
 );
 ```
 
-Go get both required packages listed above 
+Go get both required packages listed below 
 
 ```bash
 go get golang.org/x/crypto/bcrypt
